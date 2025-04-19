@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Këvila Kïnu</title>
+    <style>
+        @font-face {
+            font-family: 'Kiineza';
+            src: url('fonts/Kiineza_Laaitu.woff2') format('woff2');
+        }
+
+        :root {
+            --primary: #318cd3;
+            --secondary: #ebc185;
+            --background: #07080b;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            font-family: 'Kiineza', sans-serif;
+        }
+
+        /* 新增点击提示样式 */
+        .click-prompt {
+            position: absolute;
+            bottom: 20px;
+            right: 30px;
+            color: var(--primary);
+            animation: pulse 1.5s infinite;
+            font-size: 2.2em;
+            opacity: 0.7;
+        }
+
+        #click-prompt-mask {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 400px;  
+          height: 60px;
+          background: var(--background);
+          z-index: 999;
+          display: none;
+          pointer-events: none; /* 防止阻挡点击事件 */
+        }
+
+
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* 游戏容器样式 */
+        #game-container {
+            width: 100vw;
+            max-width: 1024px;
+            min-width: 800px;
+            aspect-ratio: 4/3;
+            margin: 0 auto;
+            position: relative;
+            background: var(--background);
+            cursor: pointer;
+        }
+
+        /* 角色立绘容器 */
+        #character {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: contain;
+            background-repeat: no-repeat;
+        }
+
+        #character.disconnect {
+		  filter: blur(2px) ;
+		  transition: filter 0.3s ease;
+		}
+
+		#character.dark {
+		  filter: brightness(0.4);
+		  transition: filter 0.3s ease;
+		}
+
+        #text-display {
+            color: var(--primary);
+            font-size: 2.5em;
+            height: auto;
+            pointer-events: none;
+            line-height: 1;
+            padding: 0 0
+        }
+        #text-display.gray {
+            color: #b0b0b0
+        }
+        #text-display.white {
+            color: #fff
+        }
+        #text-display.golden {
+            color: var(--secondary)
+        }
+        #text-display.blue {
+            color: var(--primary)
+        }
+
+
+        /* 对话框样式 */
+        #dialog-box {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 30%;
+            background: rgba(7, 8, 11, 0.9);
+            border-top: 3px solid var(--primary);
+            color: white;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* 词典图标样式 */
+		#dict-icon {
+		  display: block;
+		  position: absolute;
+		  bottom: calc(30% + 20px);
+		  right: 30px;
+		  width: 80px;    /* 根据图标大小自行调整 */
+		  height: 80px;
+		  background: url('icons/dictionary-back.png') no-repeat;
+		  background-size: contain;
+		  cursor: pointer;
+		  transition: background-image 0.1s;
+		}
+		#dict-icon:hover {
+		  background-image: url('icons/dictionary.png');
+		}
+		#dict-icon img {
+		  width: 100%;
+		  height: 100%;
+		  display: none;
+		}
+
+        /* 自定义键盘样式 */
+        #keyboard-overlay {
+            position: absolute;
+		    left: 50%;
+		    top: 55%;
+		    transform: translate(-50%, -50%);
+		    min-width: 300px;
+		    background: rgba(7, 8, 11, 0.85);
+		    backdrop-filter: blur(10px);
+		    border-radius: 12px;
+		    padding: 20px 15px;
+		    box-sizing: border-box;
+		    display: grid;
+		    gap: 5px;
+		    opacity: 0;
+		    transition: 
+		        opacity 0.3s ease,
+		        transform 0.3s ease;
+		    
+		    /* 边框与阴影效果 */
+		    border: 1px solid white;
+		    box-shadow:
+		        0 0 0 1px rgba(0, 153, 255, 0.1),
+		        0 0 15px rgba(0, 153, 255, 0.2),
+		        inset 0 0 10px rgba(255, 255, 255, 0.05);
+        }
+
+        #keyboard-overlay.show {
+            opacity: 1;
+        }
+
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 0px 0;
+        }
+        .key {
+            background: transparent;
+            color: white;
+            min-width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            font-size: 2.4em;
+        }
+
+        .key:hover {
+            background: var(--secondary);
+            color: var(--background);
+        }
+
+        .vowel-key {
+            font-size: 3.2rem !important;
+            letter-spacing: -0.1rem;
+        }
+        #choices {
+		  display: flex;                    /* 打开 flex 布局 */
+		  justify-content: space-evenly;    /* 子元素平均分布，也可以改成 space-between、space-around 试试不同效果 */
+		  align-items: center;              /* 垂直居中（可选） */
+		  flex-wrap: wrap;                  /* 多个按钮时自动换行（可选） */
+		  gap: 0 30px;                      /* 横向间距 30px，可按需调整 */
+		  margin-top: 15px;                 /* 上边距（可选） */
+		}
+
+        /* 选项按钮样式 */
+        .choice-btn {
+            font-size: 2.5em;
+            background: none !important;
+            color: #fff;
+            border: none;
+
+            margin: 0;
+            
+            transition: color 0.3s;
+            cursor: pointer;
+            font-family: 'Kiineza';
+            line-height: 1;
+        }
+        .choice-btn:hover {
+            color: var(--secondary);
+            transform: scale(1.1);
+        }
+
+        .key, .choice-btn {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #name-display {
+        	color: var(--secondary);
+            border: 2px solid #fff;
+            padding: 5px;
+            margin: 10px 0;
+            font-size: 2.5em;
+            min-height: 1.2em;
+            line-height: 1;
+        }
+
+        .name-display {
+
+            margin: 5px 0;
+            min-height: 0.6em;
+            
+        }
+
+        .input-feedback {
+            color: #fff;
+            font-size: 1.8m;
+            min-height: 1.2em;
+        }
+
+        .keyboard-key-group {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 8px 0;
+        }
+
+        
+
+
+        .effect-shake {
+            animation: shake 0.8s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shake {
+            10%, 90% { transform: translateX(-1px); }
+            20%, 80% { transform: translateX(2px); }
+            30%, 50%, 70% { transform: translateX(-3px); }
+            40%, 60% { transform: translateX(3px); }
+        }
+
+        .effect-glow {
+            text-shadow: 0 0 10px var(--primary);
+            animation: glow-pulse 2s infinite;
+        }
+
+        .effect-blur {
+            filter: blur(1px);
+            transition: filter 0.5s;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="character"></div>
+        <div id="dialog-box">
+            <div id="text-display"></div>
+            <div id="choices"></div>
+            <div id="name-input" style="display:none;">
+                
+                <div id="name-display"></div>
+                <div id="result" class="input-feedback"></div>
+            </div>
+        </div>
+        <!-- 1. 词典图标链接 -->
+		<a
+		  id="dict-icon"
+		  href="https://zanaam.netlify.app"
+		  target="_blank"
+		  title="Sozanäma Salïvusu"
+		  onclick="event.stopPropagation()"
+		>
+		  <img src="icons/dictionary.png" alt="Sozanäma Salïvusu" />
+		</a>
+        <div id="keyboard-overlay">
+            <!-- 通过JavaScript动态生成 -->
+        </div>
+        <div id="click-prompt-mask"></div>
+    </div>
+    <audio id="bgm" loop>
+      <source src="bgm/bgm.ogg" type="audio/ogg">
+    </audio>
+
+    <script>
+        // 游戏数据
+        const secretKeywords = ['星辰', '水晶', '天文', '时间', '回响', 'xomAm'];
+        const gameData = {
+            currentLine: 0,
+            playerName: '',
+            currentScene: 'opening1',
+            currentExpression: 'default',
+            scenes: {
+			  opening1: {
+			    image: '',
+			    lines: [
+			      { 
+			        text: '……s…ss…',
+
+			        action: () => {
+                        setExpression('default');
+                        // 然后加上断线的模糊或变暗
+                        document.getElementById('character').classList.add('disconnect');
+
+                    }
+			      },
+			      {
+                      text: '……xE? dOl/u mal/em/e vOxis/ok/i?',
+                      effect: 'shake',
+                      action: () => {
+                        document.getElementById('character').classList.remove('disconnect');
+                        
+                      }
+                  },
+			      { text: '……nal/o mal/a vOxis/u kik/og/i. nal/o dOl/u xikOl/i?' },
+			      { text: '', type: 'input' }
+			    ],
+			    next: 'opening2'
+			  },
+
+			  opening2: {
+			    lines: [
+			      {
+			        text: () => {
+			          if (gameData.playerName.length > 8) return `xE, nal/o ${gameData.playerName}/I/U……xikOl/i…? ……bE nOk/a nAm/u…!`;
+			          if (gameData.playerName.length < 2 ) return `xE, nal/o ${gameData.playerName}/I/U xikOl/i? kUxik/a nAm/u!`;
+			          if (gameData.playerName === 'kAvilak') return "xE! manal/a nAm/u xikOl/i!… mezUl/u……";
+			          if (gameData.playerName === 'sIkun' || gameData.playerName === 'tOmisEla') return "manal/o moz/e maziiv/og/i?";
+			          if (gameData.playerName.indexOf('e') != -1) return `xE, nal/o ${gameData.playerName}/I/U xikOl/i? xomAm/a nAm/ed/e……`;
+			          return `xE, nal/o ${gameData.playerName}/I/U xikOl/i…? bEsut/a nAm/u……`;
+			        },
+			        effect: 'glow',
+			        action: () => {
+			        	if (gameData.playerName === 'sIkun' || gameData.playerName === 'tOmisEla') {setExpression('sad')
+			        	}else{setExpression('happy')};
+			    	}
+			      },
+			      {
+			        text: 'damam/e makehikAl/u lanAz/ok/i. mal/o vU nal/u tigAxun/a zAkAs/e kAs/ok/U kimOt/ok/i, k/e.',
+			        action: () => setExpression('default')
+			      },
+                  {
+                    text: () => {
+			          if (gameData.playerName === 'kAvilak') return "mal/o zed/e kAvilak/I/U xikOl/i. xe, vA damam/e xomAm/u mil/ok/A vik/a sOt/u.";
+			          return `mal/o kAvilak/I/U xikOl/i. xo, vA damam/e xomAm/u mil/ok/A vik/a sOt/u.`;
+			        },
+                  }
+			    ],
+			    next: 'start'
+			  },
+
+			  start: {
+			    lines: [
+			      { text: 'mal/o xomAm/u lAxek/i. nal/o zed/e xomAm/u kUlAxek/i?' ,
+			        action: () => setExpression('default')
+			      },
+			      {
+			        type: 'choices',
+			        options: [			          
+			          { text: 'xelAxek/i.', next: 'notFan'},
+                      { text: 'zed/u.', next: 'starFan' }
+			        ]
+			      }
+			    ]
+			  },
+
+			  starFan: {
+			    lines: [
+			      {
+			        text: () => {
+			          if (gameData.playerName === 'kAvilak') return "bEsut/u! nal/o mal/u zed/i.";
+			          return `bEsut/u! ${gameData.playerName}, nal/o mal/u zed/i.`;
+			        },
+			        effect: 'shake',
+			        action: () => setExpression('happy')
+			      },
+			      {text: `xomAm/o nAz/a baz/a kA dabaz/u zed/i.`,effect: 'glow'},
+                  {text: `kAk/u sAxin/i. mal/o vU kAk/u mal/em/e vOxis/ok/U kimOt/ok/i.`,effect: 'glow'},
+			      {
+			        type: 'choices',
+			        options: [
+			          { text: 'nal/o xomAm/u dOg/e mil/ok/i?', next: 'ending1' },
+			          { text: 'xomAm/o vOxis/u xek/i.', next: 'ending2' }
+			        ]
+			      }
+			    ]
+			  },
+
+			  notFan: {
+			    lines: [
+			      {
+			        text: 'nal/o xomAm/em/e vOsut/a kimOt/u xIn/ok/i.',
+			        effect: 'blur',
+			        action: () => setExpression('sad')
+			      },
+                  {
+                    text: `xe makehikAl/et/e, kAk/o gAl/a n/u mal/e vatAl/og/i.`,
+                    effect: 'glow',
+                    action: () => setExpression('default')
+                  },
+
+			      {
+			        type: 'choices',
+			        options: [
+			          { text: 'mal/o n/u xeh/ok/i.', next: 'ending4' },
+                      { text: 'kAk/o dOm/u vOxis/ok/i?', next: 'ending3' }
+			          
+			        ]
+			      }
+			    ]
+			  },
+
+			  ending1: {
+			    lines: [
+			      { text: 'mal/o vA mal/o lokam/og/A vik/a xomAm/a dOxug/en/e xomAm/a dukEv/u mil/ok/i.' ,
+			        action: () => setExpression('default')
+			      },
+                  { text: 'bE, mal/o vU kEvil/a kIn/a kA mOzez/o xomAm/a hikAl/u himEz/U mil/og/i.', effect: 'glow' },
+			      { text: 'kEvil/a kIn/a kA mOzez/et/e, mal/o vU xomAm/a himEz/o mezUl/e zAmam/a lOxad/u kavAl/og/U mil/og/i xo, nal/u mil/ok/i.' ,
+			        action: () => setExpression('happy')
+			      },
+			      { text: 'k/e, manal/u kAs/e zAmam/ezA/a kAsezat/a kA vOxis/u n/ok/i……', effect: 'glow' },
+			      { 
+			        text: '_himEz/u kOm/og/i._',
+				    action: () => {
+				    	// 先恢复成“睁眼”立绘
+				    	setExpression('happy');
+				    	// 然后加上断线的模糊或变暗
+				    	document.getElementById('character').classList.add('disconnect');
+    					stopBlinking(); // 禁用眨眼
+                        toggleClickPromptMask(true); 
+                        document.getElementById('text-display').classList.add('gray');
+				  	}
+			      },
+			      { text: "sikOm/u' kEvil/a kIn/a kA kOlab/a kimOt/u" ,
+				    action: () => document.getElementById('text-display').classList.add('golden')
+				  }
+			    ],
+			    goodEnd: true
+			  },
+
+			  ending2: {
+			    lines: [
+			      {
+			        text: 'xE…… mal/o vU tigAxun/a sOt/o zed/a kimOt/u xIn/U m/og/i.',
+			        effect: 'blur',
+			        action: () => setExpression('sad')
+			      },
+			      { text: 'xi, nA kimOt/o bE mal/a sikOmezA/a m/u xikOl/i.' },
+			      { 
+			        text: "xe, mal/o nal/em/a vOxis/u bE h/ok/i' silan/a zAmam/e, nal/u zed/e kUkAs/ot/i?",
+			        effect: 'shake'
+			      },
+			      {
+			        text: '_himEz/u kOm/og/i._',
+				    action: () => {
+				    	// 先恢复成“睁眼”立绘
+				    	setExpression('sad');
+				    	// 然后加上断线的模糊或变暗
+				    	document.getElementById('character').classList.add('disconnect');
+    					stopBlinking(); // 禁用眨眼
+                        toggleClickPromptMask(true); 
+                        document.getElementById('text-display').classList.add('gray');
+				  	}
+			      },
+			      { text: "sikOm/u' vAtik/a hikAl/a kA kulEz/a kEv/u",
+				    action: () => document.getElementById('text-display').classList.add('white')
+			      }
+			    ],
+			    badEnd: true
+			  },
+
+			  ending3: {
+			    lines: [
+			      { text: "xomAm/u mal/em/e vOxis/ok/i' kEvil/a kIn/a kA mOzezezA/a nal/o, bE hIden/u xIn/ok/i.", effect: 'glow',
+			        action: () => setExpression('default') },
+			      { text: 'xe, vOxis/u vik/ok/i. mal/o bEsut/a kik/u xek/ok/i……',
+			        action: () => setExpression('sad') },
+			      { text: 'k/e silan/a zAmam/e, kAk/en/a kik/u silokam/ot/i.', effect: 'blur' },
+			      {
+			        text: '_himEz/u kOm/og/i._',
+				    action: () => {
+				    	// 先恢复成“睁眼”立绘
+				    	setExpression('sad');
+				    	// 然后加上断线的模糊或变暗
+				    	document.getElementById('character').classList.add('disconnect');
+    					stopBlinking(); // 禁用眨眼
+                        toggleClickPromptMask(true); 
+                        document.getElementById('text-display').classList.add('gray');
+				  	}
+			      },
+			      { text: "sikOm/u' sokOm/a xomAm/a kA matolIxos/a vOxis/u",
+				    action: () => document.getElementById('text-display').classList.add('white')
+				  }
+			    ],
+			    badEnd: true
+			  },
+
+			  ending4: {
+			    lines: [
+			      { text: 'xE, kI……', effect: 'shake' ,
+			        action: () => setExpression('sad')},
+			      { text: 'nal/u h/ok/i xa, xomAm/u xo mal/u maz/e kAs/i.',
+			        action: () => setExpression('default')},
+			      { text: 'k/e, nal/o silan/a zAmam/e m/u kavAl/ot/i…?', effect: 'glow' },
+			      {
+			        text: '_himEz/u kOm/og/i._',
+				    action: () => {
+				    	// 先恢复成“睁眼”立绘
+				    	setExpression('sad');
+				    	// 然后加上断线的模糊或变暗
+				    	document.getElementById('character').classList.add('disconnect');
+    					stopBlinking(); // 禁用眨眼
+                        toggleClickPromptMask(true); 
+                        document.getElementById('text-display').classList.add('gray');
+				  	}
+			      },
+			      { text: "sikOm/u' kevOxis/a makehikAl/a kA sikOm/a sIxan/u",
+				    action: () => document.getElementById('text-display').classList.add('white')
+                  }
+			    ],
+			    badEnd: true
+			  },
+			  secretEnding: {
+			    lines: [
+			      { text: '……nal/o……xomAm/u xikOl/i?', effect: 'shake' ,
+			        action: () => setExpression('happy')},
+			      { text: ' xu, m/A zAmam/e mal/o magAlan/e vU bEsut/e nal/en/e kik/ok/U n/ok/i!!', effect: 'glow' ,
+			        action: () => setExpression('happy')},
+			      
+			      {
+			        text: '_sIxan/u kAs/og/i._',
+				    action: () => {
+				    	// 先恢复成“睁眼”立绘
+				    	setExpression('happy');
+				    	// 然后加上断线的模糊或变暗
+				    	document.getElementById('character').classList.add('disconnect');
+    					
+                        toggleClickPromptMask(true); 
+                        document.getElementById('text-display').classList.add('gray');
+				  	}
+			      },
+			      { text: "sikOm/u' sikOmezA/a m/a kA magAlan/a kAs/u",
+				    action: () => document.getElementById('text-display').classList.add('blue')
+                  }
+			    ],
+			    secretEnd: true
+			  },
+
+			},
+            playerData: {} // 存储玩家状态
+        };
+
+        const textDisplay = document.getElementById('text-display');
+        const nameDisplay = document.getElementById('name-display');
+        const resultDisplay = document.getElementById('result');
+
+
+
+        // 控制眨眼动画
+        let blinkInterval;
+        function startBlinkAnimation() {
+		  let isOpen = true;
+		  clearInterval(blinkInterval);
+		  blinkInterval = setInterval(() => {
+		    const expr = gameData.currentExpression;
+		    const suffix = isOpen ? 'open' : 'close';
+		    document.getElementById('character').style.backgroundImage =
+		      `url(images/${expr}-${suffix}.jpg)`;
+		    isOpen = !isOpen;
+		  }, 3000);
+		}
+
+		function stopBlinking() {
+		  clearInterval(blinkInterval);
+		}
+
+		function setExpression(expr) {
+		  gameData.currentExpression = expr;
+		  // 立刻把图片切成「睁眼」状态
+		  document.getElementById('character').style.backgroundImage =
+		    `url(images/${expr}-open.jpg)`;
+		}
+
+        // 显示文字（逐字显示效果）
+        function typeText() {
+
+            const scene = gameData.scenes[gameData.currentScene];
+            if(!scene.lines[gameData.currentLine]) return;
+
+            const currentLine = scene.lines[gameData.currentLine];
+            let textContent = '';
+
+            isTyping = true;
+        	clickPrompt.style.display = 'none';
+
+            // 处理函数型文本
+            if(typeof currentLine.text === 'function') {
+                try {
+                    textContent = currentLine.text(gameData.playerName || 'mol'); // 添加默认值
+                } catch (error) {
+                    console.error("文本生成错误:", error);
+                    textContent = "";
+                }
+            } else {
+                textContent = currentLine.text;
+            }
+
+            // 过滤特殊字符
+            textContent = textContent
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/\(playerName\)/g, gameData.playerName); // 兼容旧格式
+
+            // 应用特效前重置状态
+            applyEffect(currentLine.effect);
+
+            // 处理特殊类型
+            if(currentLine.type === 'input') {
+                showNameInput();
+                gameData.currentLine++; // 新增：处理完立即递增
+                return;
+            }
+            
+            if(currentLine.type === 'choices') {
+                showAdvancedChoices(currentLine.options);
+                gameData.currentLine++; // 新增：处理完立即递增
+                return;
+            }
+
+            // 处理动态文本
+            const text = typeof currentLine.text === 'function' 
+                ? currentLine.text(gameData.playerName)
+                : currentLine.text;
+            
+            // 应用特效
+            applyEffect(currentLine.effect);
+            
+            // 播放音效
+            if(currentLine.action) currentLine.action();
+
+            const textDisplay = document.getElementById('text-display');
+
+            // 清除之前的动画
+	        if(typingInterval) clearInterval(typingInterval);
+	        textDisplay.innerHTML = '';
+
+            // 打字机效果
+            let index = 0;
+	        typingInterval = setInterval(() => {
+	            textDisplay.innerHTML += text[index];
+	            if(++index === text.length) {
+	                completeTyping();
+	            }
+	        }, 50);
+	    }
+
+	    function completeTyping() {
+	        clearInterval(typingInterval);
+	        isTyping = false;
+	        gameData.currentLine++;
+
+	        const scene = gameData.scenes[gameData.currentScene];
+		    const hasNextLine = scene.lines[gameData.currentLine];
+		    const hasNextScene = !!scene.next;
+
+
+	        if (hasNextLine || hasNextScene) {
+		        clickPrompt.style.display = 'block';
+		    } else {
+		        clickPrompt.style.display = 'none';
+		        // ——这里可以做“结局收尾”用，比如播个动画、跳个链接……
+		    }
+	    }
+
+        // 显示选项
+        function showChoices() {
+            const choicesContainer = document.getElementById('choices');
+            choicesContainer.innerHTML = '';
+            
+            gameData.scenes[gameData.currentScene].choices.forEach(choice => {
+                const btn = document.createElement('button');
+                btn.className = 'choice-btn';
+                btn.textContent = choice.text;
+                btn.onclick = () => changeScene(choice.next);
+                choicesContainer.appendChild(btn);
+            });
+        }
+
+        function showAdvancedChoices(options) {
+            isChoosing = true;
+            const container = document.getElementById('choices');
+            container.innerHTML = '';
+            
+            options.forEach(opt => {
+                if(opt.condition && !opt.condition(gameData.playerData)) return;
+                
+                const btn = document.createElement('button');
+                btn.className = `choice-btn ${opt.style || ''}`;
+                btn.textContent = opt.text;
+                btn.onclick = (e) => { // 添加事件参数
+                    e.stopPropagation(); // 阻止事件冒泡
+                    isChoosing = false;
+                    if(opt.next) changeScene(opt.next);
+                    if(opt.action) opt.action();
+                    container.innerHTML = '';
+                };
+                container.appendChild(btn);
+            });
+        }
+
+
+
+        // 修改后的changeScene函数
+        function changeScene(sceneId) {
+
+        	if(typingInterval) clearInterval(typingInterval);
+        	isTyping = false;
+
+
+            gameData.currentScene = sceneId;
+            gameData.currentLine = 0; // 重置台词索引
+            const scene = gameData.scenes[sceneId];
+            
+            document.getElementById('character').style.backgroundImage = 
+                `url(${scene.image})`;
+            
+            typeText(); // 开始播放第一句台词
+            // 控制眨眼动画
+            if(blinkInterval) clearInterval(blinkInterval);
+            startBlinkAnimation();
+        }
+
+        // 初始化键盘
+        function initKeyboard() {
+            const keyboard = document.getElementById('keyboard-overlay');
+            keyboard.innerHTML = '';
+
+            keyboardLayout.forEach(row => {
+                const rowDiv = document.createElement('div');
+                rowDiv.className = 'keyboard-row';
+                row.forEach(char => {
+                    const key = document.createElement('div');
+                    // 修正元音判断逻辑
+                    const isVowel = 'AEIOUaeiouÀàÈèÌìÒòÙù'.includes(char); // 扩展支持更多元音字符
+                    key.className = `key ${isVowel ? 'vowel-key' : ''}`;
+                    key.textContent = char;
+                    key.addEventListener('click', (e) => {
+                        e.stopPropagation(); // 阻止事件冒泡
+                        handleKeyPress(char);
+                    });
+                    rowDiv.appendChild(key);
+                });
+                keyboard.appendChild(rowDiv);
+            });
+        }
+
+        // 显示姓名输入界面
+        function showNameInput() {
+            isInputting = true; // 进入输入状态
+            document.getElementById('name-input').style.display = 'block';
+            document.getElementById('keyboard-overlay').classList.add('show');
+            document.getElementById('choices').innerHTML = '';
+            // 添加输入界面专用提示
+            resultDisplay.textContent = "lO nal/o nAm/u vatAl/ot/i.";
+        }
+
+        // 处理输入完成
+        function confirmName() {
+            isInputting = false; // 退出输入状态
+            gameData.playerName = document.getElementById('name-display').textContent;
+            document.getElementById('keyboard-overlay').classList.remove('show');
+            
+            // 自动触发下一场景
+            const currentScene = gameData.scenes[gameData.currentScene];
+            if(currentScene.next) {
+                changeScene(currentScene.next);
+            }
+        }
+
+
+
+        // 初始化游戏
+        function initGame() {
+            // 初始化显示元素
+            document.getElementById('name-display').textContent = '';
+            document.getElementById('result').textContent = '';
+            document.getElementById('text-display').textContent = '';
+            document.getElementById('name-input').style.display = 'none';
+            
+            // 启动第一个场景
+            changeScene('opening1'); // 直接从第一个场景开始
+        }
+
+        // 新增点击提示元素
+        const clickPrompt = document.createElement('div');
+        clickPrompt.className = 'click-prompt';
+        clickPrompt.textContent = 't/ot/i';
+        document.getElementById('dialog-box').appendChild(clickPrompt);
+
+        // 键盘布局配置
+        const keyboardLayout = [
+            ['v', 't', 's', 'k', 'o', 'i', 'U', 'A'],
+            ['b', 'd', 'z', 'g', 'u', 'a', 'E', '×'],
+            ['m', 'n', 'l', 'h', 'e', 'O', 'I', '↵']
+        ];
+
+        // 输入处理逻辑
+        function processInput(str) {
+            const consonants = new Set(['x','v','b','m','t','d','n','s','z','l','k','g','h']);
+            let output = [];
+            
+            for(let i = 0; i < str.length; i++) {
+                const current = str[i];
+                if ('AEIOUaeiou'.includes(current)) {
+                    // 如果前面没有辅音或处于开头位置
+                    if(i === 0 || !consonants.has(str[i-1].toLowerCase())) {
+                        output.push('x');
+                    }
+                }
+                output.push(current);
+            }
+            return output.join('');
+        }
+
+        // 键盘事件处理
+        function handleKeyPress(char) {
+            const display = document.getElementById('name-display');
+            
+            switch(char) {
+                case '×': 
+                    display.textContent = '';
+                    break;
+                case '↵':
+                    if(display.textContent.trim()) {
+                        gameData.playerName = display.textContent
+                            .replace(/[^A-Za-zÀ-ÿ]/g, '')
+                            .trim();
+
+                         // 隐藏结局检测：只有在第一个场景输入时生效
+				        
+
+
+                        
+                        if(gameData.playerName.length < 1) {
+                            document.getElementById('result').textContent = "naz/o kem/u xIn/ok/i.";
+                            return;
+                        }
+
+                        isInputting = false; // 确保退出输入状态
+                        
+                        // 立即清除输入相关元素
+                        document.getElementById('keyboard-overlay').classList.remove('show');
+                        document.getElementById('name-input').style.display = 'none';
+                        //document.querySelector('.prompt').style.display = 'none';
+                        document.getElementById('result').textContent = '';
+                        display.textContent = ''; // 清空输入显示
+
+                        if (gameData.currentScene === 'opening1' 
+				            && secretKeywords.includes(gameData.playerName)) {
+				            // 直接进入隐藏结局
+				            changeScene('secretEnding');
+				            return;
+				        }
+                        
+                        // 使用场景系统的正式跳转方法
+                        const currentScene = gameData.scenes[gameData.currentScene];
+                        if(currentScene.next) {
+                            // 直接跳转场景，避免使用setTimeout
+                            changeScene(currentScene.next);
+                        }
+                        if (!currentScene.next) {
+			                gameData.currentLine++;
+			                typeText();
+			            }
+                    }
+                    break;
+                default:
+                    // 添加输入长度限制
+                    if(display.textContent.length < 12) {
+                        display.textContent = processInput(display.textContent + char);
+                    }
+            }
+        }
+
+        function applyEffect(effectName) {
+            const textDisplay = document.getElementById('text-display');
+            // 移除所有可能存在的特效
+            textDisplay.classList.remove(
+                'effect-shake', 
+                'effect-glow', 
+                'effect-blur'
+            );
+            
+            if(effectName) {
+                textDisplay.classList.add(`effect-${effectName}`);
+                // 特殊处理模糊效果
+                if(effectName === 'blur') {
+                    textDisplay.style.transition = 'filter 0.5s';
+                }
+            }
+        }
+
+        function toggleClickPromptMask(show) {
+          document.getElementById('click-prompt-mask').style.display = show ? 'block' : 'none';
+        }
+
+        
+        
+
+
+
+        // 新增点击事件监听
+        let isAnimating = false;
+        let isInputting = false;
+        let isTyping = false;
+	    let typingInterval = null;
+        const gameContainer = document.getElementById('game-container');
+        gameContainer.addEventListener('click', (e) => {
+          if (e.target.closest('#keyboard-overlay')) return;
+
+          // 还在打字就直接完成打字，不会走到 restoreCharacter
+          if (isTyping) {
+            const scene = gameData.scenes[gameData.currentScene];
+            const currentLine = scene.lines[gameData.currentLine];
+            if (currentLine) {
+              textDisplay.textContent = 
+                typeof currentLine.text === 'function'
+                  ? currentLine.text(gameData.playerName)
+                  : currentLine.text;
+              completeTyping();
+            }
+            return;
+          }
+
+          // 如果正在动画、选项、输入，都不往下走
+          if (isAnimating || isChoosing || isInputting) return;
+
+          const scene = gameData.scenes[gameData.currentScene];
+          const currentLine = scene.lines[gameData.currentLine];
+          if (!currentLine) {
+            if (scene.next) changeScene(scene.next);
+            return;
+          }
+
+          if (currentLine.type === 'choices') {
+            showAdvancedChoices(currentLine.options);
+            return;
+          }
+
+          // 正常情况下，启动下一句打字
+          isAnimating = true;
+          setTimeout(() => {
+            typeText();
+            isAnimating = false;
+          }, 100);
+        });
+
+        let isChoosing = false;
+
+        // 启动游戏
+        window.onload = () => {
+            const bgm = document.getElementById('bgm');
+
+            // 处理自动播放限制
+            function handleFirstInteraction() {
+              bgm.play();
+              document.removeEventListener('click', handleFirstInteraction);
+            }
+
+            document.addEventListener('click', handleFirstInteraction);
+
+            // 初始化时尝试自动播放（现代浏览器可能需要用户交互）
+            bgm.play().catch(() => {
+              console.log('等待用户交互后自动播放');
+            });
+
+            initKeyboard();
+            initGame();
+        };
+    </script>
+</body>
+</html>
