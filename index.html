@@ -63,6 +63,100 @@
             cursor: pointer;
         }
 
+        /* 外层 wrapper：100% 覆盖游戏区，用来接收点击关闭事件 */
+        #dict-wrapper {
+          position: absolute;
+          top: 0; left: 0;
+          width: 100%; height: 100%;
+          z-index: 999;              /* 保证在最上层 */
+          pointer-events: none;      /* 除了内部 wrapper，外面都不拦截点击 */
+        }
+
+        /* 真正的 iframe 容器：70% 宽 × 40% 高，居中 */
+        #dict-iframe-wrapper {
+          position: relative;
+          top: 50%; left: 50%;
+          width: 60%;    /* 相对于 #game-container 宽度 */
+          height: 42%;   /* 相对于 #game-container 高度 */
+          transform: translate(-50%, -40%);
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          overflow: hidden;        /* 超出部分裁剪 */
+          pointer-events: auto;    /* 允许点击 iframe 和按钮 */
+          background: rgba(7,8,11,0.85); /* 半透明底，凸显词典 */
+          
+          border: 2px solid var(--primary);
+          border-radius: 8px;
+          box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* 抓手区域 */
+        .drag-handle {
+          height: 1em;
+          background: var(--primary);
+          color: var(--background);
+          font-size: 1.8em;
+          line-height: 0.9em;
+          text-align: center;
+          cursor: grab;
+          user-select: none;
+          flex: 0 0 auto;
+          z-index: 10;
+        }
+
+
+
+        .drag-handle:active {
+          cursor: grabbing;
+        }
+
+        #iframe-container {
+          flex: 1 1 auto;
+          position: relative;
+          overflow: hidden;
+        }
+
+        /* iframe 本身放大 2 倍，再缩回 scale(0.5) */
+        #dict-iframe {
+          position: absolute;
+          top: 0; left: 0;
+          width: 200%;    /* 保证缩放后内容充满容器 */
+          height: 200%;
+          border: none;
+          transform-origin: 0 0;
+          transform: scale(0.5);
+        }
+
+        /* 关闭按钮，放在容器右上角 */
+        #dict-close {
+          position: absolute;
+          top: 0.5em; right: 0.5em;
+          background: var(--secondary);
+          color: var(--background);
+          border: none;
+          font-size: 1.5em;
+          line-height: 1;
+          padding: 0.2em 0.5em;
+          border-radius: 50%;
+          cursor: pointer;
+          z-index: 1001;
+        }
+
+        #dict-open-tab {
+          position: absolute;
+          top: 0.5em; right: 2.5em;
+          background: var(--secondary);
+          color: var(--background);
+          border: none;
+          font-size: 1.5em;
+          line-height: 1;
+          padding: 0.2em 0.5em;
+          border-radius: 50%;
+          cursor: pointer;
+          z-index: 1001;
+        }
+
         /* 角色立绘容器 */
         #character {
             position: absolute;
@@ -289,6 +383,25 @@
 </head>
 <body>
     <div id="game-container">
+        <div id="dict-wrapper" style="display:none;">
+          <div id="dict-iframe-wrapper">
+            <!-- 抓手区域 -->
+            <div class="drag-handle">sozanAm/a salIvus</div>
+            <!-- 打开新标签页按钮（放在关闭按钮左边） -->
+            <button id="dict-open-tab" title="Masila Lïvusu">↗</button>
+            <!-- 关闭按钮（可根据需要自行换图标） -->
+            <button id="dict-close">×</button>
+            <!-- 缩放后的 iframe -->
+            <div id="iframe-container">
+                <iframe
+                  id="dict-iframe"
+                  src="https://zanaam.netlify.app"
+                  frameborder="0"
+                  allowfullscreen>
+                </iframe>
+            </div>
+          </div>
+        </div>
         <div id="character"></div>
         <div id="dialog-box">
             <div id="text-display"></div>
@@ -300,15 +413,7 @@
             </div>
         </div>
         <!-- 1. 词典图标链接 -->
-		<a
-		  id="dict-icon"
-		  href="https://zanaam.netlify.app"
-		  target="_blank"
-		  title="Sozanäma Salïvusu"
-		  onclick="event.stopPropagation()"
-		>
-		  <img src="icons/dictionary.png" alt="Sozanäma Salïvusu" />
-		</a>
+		<div id="dict-icon"></div>
         <div id="keyboard-overlay">
             <!-- 通过JavaScript动态生成 -->
         </div>
@@ -993,6 +1098,83 @@
         });
 
         let isChoosing = false;
+
+        const dictIcon    = document.getElementById('dict-icon');
+        const dictWrapper = document.getElementById('dict-wrapper');
+        const dictClose   = document.getElementById('dict-close');
+
+        // 点图标：显示浮层
+        dictIcon.addEventListener('click', e => {
+          e.stopPropagation();
+          dictWrapper.style.display = 'block';
+        });
+
+        // 点“×”或浮层空白区：关闭
+        dictClose.addEventListener('click', e => {
+          e.stopPropagation();
+          dictWrapper.style.display = 'none';
+        });
+        dictWrapper.addEventListener('click', () => {
+          dictWrapper.style.display = 'none';
+        });
+        // 阻止点击 iframe 区域也把 wrapper 关了
+        document.getElementById('dict-iframe-wrapper')
+          .addEventListener('click', e => e.stopPropagation());
+
+        const wrapper = document.getElementById('dict-iframe-wrapper');
+        const handle  = wrapper.querySelector('.drag-handle');
+
+        let dragging = false;
+        let startX, startY, origX, origY;
+
+        handle.addEventListener('pointerdown', e => {
+          if (!e.isPrimary) return;
+          dragging = true;
+
+          // 记录按下时的指针位置
+          startX = e.clientX;
+          startY = e.clientY;
+
+          // 1. 拿到 wrapper 相对于它 offsetParent 的像素坐标
+          const rect       = wrapper.getBoundingClientRect();
+          const parentRect = wrapper.offsetParent.getBoundingClientRect();
+          origX = rect.left - parentRect.left;
+          origY = rect.top  - parentRect.top;
+
+          // 2. 切换到像素定位（去掉原来 translate 居中）
+          wrapper.style.transform = 'none';
+          wrapper.style.left      = `${origX}px`;
+          wrapper.style.top       = `${origY}px`;
+
+          // 捕获后续 move/up 事件到 handle
+          handle.setPointerCapture(e.pointerId);
+          e.preventDefault();
+        });
+
+        // 这里也绑在 handle，因 setPointerCapture 后事件会到这儿
+        handle.addEventListener('pointermove', e => {
+          if (!dragging || !e.isPrimary) return;
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          wrapper.style.left = `${origX + dx}px`;
+          wrapper.style.top  = `${origY + dy}px`;
+        });
+
+        handle.addEventListener('pointerup', e => {
+          if (!dragging || !e.isPrimary) return;
+          dragging = false;
+          handle.releasePointerCapture(e.pointerId);
+        });
+
+        // （可选）处理系统中断等情况
+        handle.addEventListener('pointercancel', e => {
+          dragging = false;
+          handle.releasePointerCapture(e.pointerId);
+        });
+
+        document.getElementById('dict-open-tab').addEventListener('click', () => {
+          window.open('https://zanaam.netlify.app', '_blank');
+        });
 
         // 启动游戏
         window.onload = () => {
