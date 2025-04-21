@@ -130,27 +130,35 @@
         }
 
 
-        #dict-open-tab,
-		#dict-close {
-		  position: absolute;
-		  top: 0.5em;
-		  /* 这里右边距不同，需要分别写或者后面覆盖 */
-		  width: 1.5em;            /* 固定正方形容器 */
-		  height: 1.5em;
-		  aspect-ratio: 1 / 1;     /* 浏览器自动保持宽高比 */
-		  display: flex;           /* flex 居中内部文字或图标 */
-		  align-items: center;
-		  justify-content: center;
-		  padding: 0;              /* 去掉原来的内边距 */
-		  border: none;            /* 如需要，可在单独选择器里加边框 */
-		  border-radius: 50%;      /* 圆形 */
+        .dict-button {
+          background: var(--background);
+          color: #fff;
+    		  position: absolute;
+    		  top: 0.1em;
+    		  /* 这里右边距不同，需要分别写或者后面覆盖 */
+    		  width: 1.7em;            /* 固定正方形容器 */
+    		  height: 1.7em;
+    		  aspect-ratio: 1 / 1;     /* 浏览器自动保持宽高比 */
+    		  display: flex;           /* flex 居中内部文字或图标 */
+    		  align-items: center;
+    		  justify-content: center;
+    		  padding: 0;              /* 去掉原来的内边距 */
+    		  border: none;            /* 如需要，可在单独选择器里加边框 */
+    		  border-radius: 50%;      /* 圆形 */
+    		  border: 2px solid var(--primary);
+    		  font-size: 1.7em;        /* 控制图标/文字大小 */
+    		  line-height: 1;
+    		  cursor: pointer;
+    		  z-index: 1001;
+    		  align-items: center;
+    		  justify-content: center;
+    		  transition: all 0.2s ease;
+    		}
+
+		.dict-button:hover {
 		  background: var(--secondary);
-		  color: var(--background);
-		  font-size: 1.5em;        /* 控制图标/文字大小 */
-		  line-height: 1;
-		  cursor: pointer;
-		  z-index: 1001;
-		  box-sizing: border-box;  /* 确保边框也计入宽高 */
+      color: var(--background);
+      border: 3px solid var(--background);
 		}
 
         /* 关闭按钮，放在容器右上角 */
@@ -159,7 +167,7 @@
         }
 
         #dict-open-tab {
-          right: 2.5em;
+          right: 2.7em;
         }
 
         /* 角色立绘容器 */
@@ -393,9 +401,9 @@
             <!-- 抓手区域 -->
             <div class="drag-handle">sozanAm/a salIvus</div>
             <!-- 打开新标签页按钮（放在关闭按钮左边） -->
-            <button id="dict-open-tab" title="Masila Lïvusu">↗</button>
+            <button id="dict-open-tab" class="dict-button" title="Masila Lïvusu">↗</button>
             <!-- 关闭按钮（可根据需要自行换图标） -->
-            <button id="dict-close">×</button>
+            <button id="dict-close" class="dict-button">×</button>
             <!-- 缩放后的 iframe -->
             <div id="iframe-container">
                 <iframe
