@@ -98,7 +98,8 @@
           color: var(--background);
           font-size: 1.8em;
           line-height: 0.9em;
-          text-align: center;
+          text-align: left;
+          padding: 0 0.9em;
           cursor: grab;
           user-select: none;
           flex: 0 0 auto;
@@ -128,33 +129,37 @@
           transform: scale(0.5);
         }
 
+
+        #dict-open-tab,
+		#dict-close {
+		  position: absolute;
+		  top: 0.5em;
+		  /* 这里右边距不同，需要分别写或者后面覆盖 */
+		  width: 1.5em;            /* 固定正方形容器 */
+		  height: 1.5em;
+		  aspect-ratio: 1 / 1;     /* 浏览器自动保持宽高比 */
+		  display: flex;           /* flex 居中内部文字或图标 */
+		  align-items: center;
+		  justify-content: center;
+		  padding: 0;              /* 去掉原来的内边距 */
+		  border: none;            /* 如需要，可在单独选择器里加边框 */
+		  border-radius: 50%;      /* 圆形 */
+		  background: var(--secondary);
+		  color: var(--background);
+		  font-size: 1.5em;        /* 控制图标/文字大小 */
+		  line-height: 1;
+		  cursor: pointer;
+		  z-index: 1001;
+		  box-sizing: border-box;  /* 确保边框也计入宽高 */
+		}
+
         /* 关闭按钮，放在容器右上角 */
         #dict-close {
-          position: absolute;
-          top: 0.5em; right: 0.5em;
-          background: var(--secondary);
-          color: var(--background);
-          border: none;
-          font-size: 1.5em;
-          line-height: 1;
-          padding: 0.2em 0.5em;
-          border-radius: 50%;
-          cursor: pointer;
-          z-index: 1001;
+          right: 0.5em;
         }
 
         #dict-open-tab {
-          position: absolute;
-          top: 0.5em; right: 2.5em;
-          background: var(--secondary);
-          color: var(--background);
-          border: none;
-          font-size: 1.5em;
-          line-height: 1;
-          padding: 0.2em 0.5em;
-          border-radius: 50%;
-          cursor: pointer;
-          z-index: 1001;
+          right: 2.5em;
         }
 
         /* 角色立绘容器 */
